@@ -3,7 +3,7 @@
 
 A full-stack personal finance tracker that lets users manage multiple accounts, record transactions, transfer money between accounts, set budgets, track recurring payments, and view reports — all with correct money handling, atomic transfers, concurrency control, and a complete audit trail.
 
-**This is not just a CRUD app.** Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data. The test suite (~100 tests) found and fixed **12+ production bugs** — see the [Bugs Found Via Testing](#bugs-found-via-testing) section.
+**This is not just a CRUD app.** Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data. The test suite (~100+ tests) found and fixed **12+ production bugs** — see the [Bugs Found Via Testing](#bugs-found-via-testing) section.
 
 ## Features
 

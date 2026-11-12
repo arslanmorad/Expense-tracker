@@ -1,53 +1,111 @@
 SpendWise — Personal Finance & Expense Tracker
-🚀 Live Demo: https://expense-tracker-lake-seven-35.vercel.app
-
-A full-stack personal finance tracker that lets users manage multiple accounts, record transactions, transfer money between accounts, set budgets, track recurring payments, and view reports — all with correct money handling, atomic transfers, concurrency control, and a complete audit trail.
+A full-stack personal finance tracker for managing multiple accounts, recording transactions, transferring money, setting budgets, tracking recurring payments, and viewing reports — with correct money handling, atomic transfers, concurrency control, and a complete audit trail.
 
 This is not just a CRUD app. Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data.
+
+🚀 Live Demo: https://expense-tracker-lake-seven-35.vercel.app
+
+Table of Contents
+Features
+
+Tech Stack
+
+Architecture
+
+Why decimal (Not float/double) for Money
+
+How to Run Locally
+
+Running with Docker Compose
+
+Environment Variables
+
+Database Migrations
+
+Project Structure
+
+Testing
+
+Deployment
+
+Known Limitations
+
+License
 
 Features
 Accounts
 Create and manage multiple accounts (Checking, Savings, Credit Card, Cash, Other)
+
 Each account has a name, type, currency, and balance
-Balance is always derivable from transaction history — never overwritten freely
+
+Balance is always derived from transaction history — never overwritten freely
+
 Per-user data isolation (one user can never see another user's accounts)
+
 Transactions
 Record income and expenses with amount, date, category, description
+
 Soft delete only — transactions are never hard-deleted; "deleting" creates a reversing entry and the original remains visible in history
-All monetary values stored as decimal (see below for why)
+
+All monetary values stored as decimal (see why)
+
 Transfers Between Accounts
 Move money between accounts (e.g., Checking → Savings)
+
 Modeled as two linked entries (debit + credit) that always net to zero
+
 Created atomically — if one side fails, neither persists
+
 Categories
 User-defined categories for income and expenses
+
 Each transaction belongs to exactly one category
+
 Recurring Transactions
 Define rules like "Rent, $1200, Checking, 1st of the month"
+
 Projected upcoming transactions visible without pre-inserting future rows
+
 Background service generates real transactions when the scheduled date arrives
+
 Budgets & Alerts
 Set monthly budgets per category (e.g., "$500/month on Dining")
+
 Track actual spend against budget in real time
+
 Background service detects overspend and generates in-app alerts
+
 CSV Import
 Import bank statements from CSV
+
 Duplicate detection (same date + amount + description)
+
 Malformed rows reported individually — the whole import never crashes
+
 Preview parsed transactions before committing
+
 Reporting
 Monthly spend by category
+
 Balance-over-time / net worth trend
+
 Income vs. expense summary for a selected date range
+
 Authentication & Authorization
 JWT-based authentication
+
 All financial data scoped to the logged-in user
+
 Users can never query another user's data, even by guessing IDs
+
 Concurrency Control
 Optimistic concurrency on accounts via RowVersion token
+
 Concurrent edits return a clean error instead of silently overwriting
+
 Audit Trail
 Every transaction change (create, edit, soft-delete) is recorded with a timestamp
+
 Tech Stack
 Layer	Technology
 Backend	ASP.NET Core 10
@@ -63,6 +121,7 @@ Backend Hosting	Render
 Frontend Hosting	Vercel
 Database Hosting	Render Postgres
 Architecture
+text
 ┌──────────────────────────────────────────┐
 │  Frontend (React + Vite)                 │
 │  Deployed on Vercel                      │
@@ -86,11 +145,12 @@ Architecture
 │  PostgreSQL 15                           │
 │  Managed on Render                       │
 └──────────────────────────────────────────┘
-Why I Used decimal (Not float/double) For Money
+Why decimal (Not float/double) for Money
 All monetary values use C#'s decimal type — never float or double.
 
 float and double are binary floating-point types. They can't represent most decimal fractions exactly, so tiny rounding errors creep in:
 
+csharp
 double a = 0.1;
 double b = 0.2;
 double sum = a + b;
@@ -102,18 +162,23 @@ decimal is a base-10 type designed for financial math. It represents 0.1 and 0.2
 
 Result: Account balances are always exact. Reports never drift. Money doesn't silently lose fractions of a cent.
 
-How To Run Locally
+How to Run Locally
 Prerequisites
 Docker Desktop (for the database)
+
 .NET SDK 10
+
 Node.js 20+
+
 1. Start the database
 From the project root:
 
+bash
 docker-compose up postgres -d
 This starts PostgreSQL 15 on port 5433.
 
 2. Run the backend
+bash
 cd Backend
 dotnet restore
 dotnet build
@@ -121,26 +186,29 @@ dotnet run
 Backend runs on http://localhost:7000.
 
 3. Run the frontend
+bash
 cd Fronted
 npm install
 npm run dev
 Frontend runs on http://localhost:5173 (or 3000 — check the terminal output).
 
 4. Open the app
-http://localhost:5173
-Register a user, log in, and start using the app.
+Go to http://localhost:5173, register a user, log in, and start using the app.
 
-Running With Docker Compose (Full Stack)
+Running with Docker Compose
 To run everything in containers:
 
+bash
 docker-compose up --build
 Then open http://localhost:3000.
 
 To stop:
 
+bash
 docker-compose down
 To reset the database:
 
+bash
 docker-compose down -v
 docker-compose up -d --build
 Environment Variables
@@ -165,12 +233,15 @@ Note: Secrets are never committed to this repo. appsettings.json contains placeh
 Database Migrations
 Migrations are applied automatically on backend startup. To create a new migration:
 
+bash
 cd Backend
 dotnet ef migrations add <MigrationName>
 To apply manually:
 
+bash
 dotnet ef database update
 Project Structure
+text
 Expense-tracker/
 ├── Backend/
 │   ├── Attributes/
@@ -207,21 +278,33 @@ Why these tests matter
 Money-handling systems have real correctness requirements:
 
 Balance calculation — proves an account's balance always equals the sum of its transaction history, across creates, edits, deletes, and transfers
+
 Transfer atomicity — verifies both sides of a transfer persist, or neither does
+
 Soft-delete preservation — deleted transactions remain in history; balances still compute correctly
+
 Concurrency — optimistic concurrency returns a clean error instead of silently overwriting
+
 Run tests:
 
+bash
 cd Tests
 dotnet run
 Deployment
 Backend: Deployed on Render as a Docker container, auto-deploying from main
+
 Frontend: Deployed on Vercel, auto-deploying from main
+
 Database: Render-managed PostgreSQL 15
+
 Every push to main triggers automatic redeployment of both services.
 
 Known Limitations
 In-memory cache (if used) resets on backend restart
+
 Render free tier: backend sleeps after 15 minutes of inactivity — first request after sleep takes 30–60 seconds
+
 License
-MIT
+This project is licensed under the MIT License.
+
+

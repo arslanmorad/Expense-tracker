@@ -1,9 +1,12 @@
+
 # SpendWise — Personal Finance & Expense Tracker
 🚀 Live Demo: https://expense-tracker-lake-seven-35.vercel.app
 
 A full-stack personal finance tracker that lets users manage multiple accounts, record transactions, transfer money between accounts, set budgets, track recurring payments, and view reports — all with correct money handling, atomic transfers, concurrency control, and a complete audit trail.
 
-**This is not just a CRUD app.** Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data. The test suite (~100+ tests) found and fixed **12+ production bugs** — see the [Bugs Found Via Testing](#bugs-found-via-testing) section.
+**This is not just a CRUD app.** Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data. The test suite (~100 tests) found and fixed **12+ production bugs** — see [Bugs Found Via Testing](#bugs-found-via-testing).
+
+---
 
 ## Features
 
@@ -69,6 +72,8 @@ A full-stack personal finance tracker that lets users manage multiple accounts, 
 - Every transaction change (create, edit, soft-delete) is recorded with a timestamp
 - Includes old and new values, the acting user, and the entity ID
 
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -86,6 +91,8 @@ A full-stack personal finance tracker that lets users manage multiple accounts, 
 | Frontend Hosting | Vercel |
 | Database Hosting | Render Postgres |
 | Testing | xUnit + FluentAssertions + Moq + EF Core InMemory + SQLite |
+
+---
 
 ## Architecture
 ┌──────────────────────────────────────────┐
@@ -114,6 +121,8 @@ A full-stack personal finance tracker that lets users manage multiple accounts, 
 
 text
 
+---
+
 ## Why I Used `decimal` (Not `float`/`double`) For Money
 
 All monetary values use C#'s `decimal` type — never `float` or `double`.
@@ -132,7 +141,7 @@ decimal is a base-10 type designed for financial math. It represents 0.1 and 0.2
 
 Result: Account balances are always exact. Reports never drift. Money doesn't silently lose fractions of a cent.
 
-How To Run Locally
+## How To Run Locally
 Prerequisites
 Docker Desktop (for the database)
 
@@ -160,14 +169,14 @@ bash
 cd Fronted
 npm install
 npm run dev
-Frontend runs on http://localhost:5173.
+Frontend runs on http://localhost:5173 (or 3000 — check the terminal output).
 
 4. Open the app
+text
 http://localhost:5173
-
 Register a user, log in, and start using the app.
 
-Running With Docker Compose (Full Stack)
+## Running With Docker Compose (Full Stack)
 bash
 docker-compose up --build
 Then open http://localhost:3000.
@@ -200,7 +209,7 @@ Variable	Description
 VITE_API_URL	Backend API base URL
 Note: Secrets are never committed to this repo. appsettings.json contains placeholders only; real values live in appsettings.Development.json (gitignored) or platform environment variables.
 
-Database Migrations
+## Database Migrations
 Migrations are applied automatically on backend startup. To create a new migration:
 
 bash
@@ -210,7 +219,8 @@ To apply manually:
 
 bash
 dotnet ef database update
-Project Structure
+
+## Project Structure
 text
 Expense-tracker/
 ├── Backend/
@@ -236,7 +246,8 @@ Expense-tracker/
 │   └── Infrastructure/    ← test base classes (InMemory + SQLite)
 ├── docker-compose.yml
 └── README.md
-Testing
+
+## Testing
 The project includes ~100 automated tests across service, controller, and integration layers.
 
 Test infrastructure
@@ -260,7 +271,7 @@ CSV import	Valid parse, malformed rows reported individually, duplicates skipped
 Controllers (HTTP)	Auth (401 without token), happy path (200), validation (400), IDOR (other user's resource), round-trip (create → list), list isolation	~15
 Total: ~100 tests, all green.
 
-How to run
+## How to run
 bash
 cd Tests
 dotnet test

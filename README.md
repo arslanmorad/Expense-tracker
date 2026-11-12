@@ -1,135 +1,138 @@
-
-# SpendWise — Personal Finance & Expense Tracker
+SpendWise — Personal Finance & Expense Tracker
 🚀 Live Demo: https://expense-tracker-lake-seven-35.vercel.app
 
 A full-stack personal finance tracker that lets users manage multiple accounts, record transactions, transfer money between accounts, set budgets, track recurring payments, and view reports — all with correct money handling, atomic transfers, concurrency control, and a complete audit trail.
 
-**This is not just a CRUD app.** Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data. The test suite (~100 tests) found and fixed **12+ production bugs** — see [Bugs Found Via Testing](#bugs-found-via-testing).
+This is not just a CRUD app. Money-handling systems have real correctness requirements: balances must always be accurate, history must never silently change, and concurrent edits must not corrupt data. The test suite (~100 tests) found and fixed 12+ production bugs — see Bugs Found Via Testing.
 
----
+Features
+Accounts
+Create and manage multiple accounts (Checking, Savings, Credit Card, Cash, Other)
 
-## Features
+Each account has a name, type, currency, and balance
 
-### Accounts
-- Create and manage multiple accounts (Checking, Savings, Credit Card, Cash, Other)
-- Each account has a name, type, currency, and balance
-- Balance is always derivable from transaction history — never overwritten freely
-- Per-user data isolation (one user can never see another user's accounts)
+Balance is always derivable from transaction history — never overwritten freely
 
-### Transactions
-- Record income and expenses with amount, date, category, description
-- **Soft delete only** — transactions are never hard-deleted; "deleting" creates a reversing entry and the original remains visible in history
-- All monetary values stored as `decimal` (see below for why)
+Per-user data isolation (one user can never see another user's accounts)
 
-### Transfers Between Accounts
-- Move money between accounts (e.g., Checking → Savings)
-- Modeled as two linked entries (debit + credit) that always net to zero
-- **Created atomically** — if one side fails, neither persists
-- **Cross-currency transfers rejected** — no silent USD → EUR conversion
+Transactions
+Record income and expenses with amount, date, category, description
 
-### Categories
-- User-defined categories for income and expenses
-- Each transaction belongs to exactly one category
-- Category ownership validated on every transaction create/update
+Soft delete only — transactions are never hard-deleted; "deleting" creates a reversing entry and the original remains visible in history
 
-### Recurring Transactions
-- Define rules like "Rent, $1200, Checking, 1st of the month"
-- Explicit **`Type` field** (`Income` / `Expense`) — no sign-of-amount convention
-- Amounts always positive; `Type` determines direction
-- Background service generates real transactions when the scheduled date arrives
-- Supports **Daily / Weekly / Bi-Weekly / Monthly / Yearly** frequencies
+All monetary values stored as decimal (see below for why)
 
-### Budgets & Alerts
-- Set monthly budgets per category (e.g., "$500/month on Dining")
-- Track actual **expense** spend against budget (income excluded)
-- Background service detects overspend and generates in-app alerts
-- **One alert per category per month** — no duplicate notifications
+Transfers Between Accounts
+Move money between accounts (e.g., Checking → Savings)
 
-### CSV Import
-- Import bank statements from CSV
-- Duplicate detection (same date + amount + description)
-- Malformed rows reported individually — the whole import never crashes
-- Preview parsed transactions before committing
-- Import is **transactional** — all-or-nothing per batch
+Modeled as two linked entries (debit + credit) that always net to zero
 
-### Reporting
-- Monthly spend by category
-- Balance-over-time / net worth trend
-- Income vs. expense summary for a selected date range
+Created atomically — if one side fails, neither persists
 
-### Authentication & Authorization
-- JWT-based authentication
-- All financial data scoped to the logged-in user
-- Users can never query another user's data, even by guessing IDs
+Cross-currency transfers rejected — no silent USD → EUR conversion
 
-### Concurrency Control
-- **Optimistic concurrency** on accounts via a `RowVersion` concurrency token
-- A `SaveChangesInterceptor` automatically bumps the token on every save — services can't forget
-- Concurrent edits throw `DbUpdateConcurrencyException`, caught by services and surfaced as a clean error instead of silently overwriting
-- **Verified by tests**: two concurrent writes → exactly one succeeds, the other fails with a concurrency error
+Categories
+User-defined categories for income and expenses
 
-### Audit Trail
-- Every transaction change (create, edit, soft-delete) is recorded with a timestamp
-- Includes old and new values, the acting user, and the entity ID
+Each transaction belongs to exactly one category
 
----
+Category ownership validated on every transaction create/update
 
-## Tech Stack
+Recurring Transactions
+Define rules like "Rent, $1200, Checking, 1st of the month"
 
-| Layer | Technology |
-|-------|------------|
-| Backend | ASP.NET Core 10 |
-| ORM | Entity Framework Core |
-| Database | PostgreSQL 15 |
-| Auth | JWT + ASP.NET Identity |
-| Validation | FluentValidation |
-| Background Jobs | IHostedService / BackgroundService |
-| Frontend | React (Vite) |
-| Styling | CSS |
-| Containerization | Docker + Docker Compose |
-| Backend Hosting | Render |
-| Frontend Hosting | Vercel |
-| Database Hosting | Render Postgres |
-| Testing | xUnit + FluentAssertions + Moq + EF Core InMemory + SQLite |
+Explicit Type field (Income / Expense) — no sign-of-amount convention
 
----
+Amounts always positive; Type determines direction
 
-## Architecture
-┌──────────────────────────────────────────┐
-│ Frontend (React + Vite) │
-│ Deployed on Vercel │
-└──────────────────┬───────────────────────┘
-│ HTTPS (JWT in header)
-▼
-┌──────────────────────────────────────────┐
-│ Backend (ASP.NET Core Web API) │
-│ Deployed on Render (Docker container) │
-│ │
-│ ├── Controllers │
-│ ├── Services (business logic) │
-│ ├── Background Services │
-│ │ ├── BudgetAlertService │
-│ │ └── RecurringRuleService │
-│ └── Entity Framework Core │
-└──────────────────┬───────────────────────┘
-│ Npgsql
-▼
-┌──────────────────────────────────────────┐
-│ PostgreSQL 15 │
-│ Managed on Render │
-└──────────────────────────────────────────┘
+Background service generates real transactions when the scheduled date arrives
 
-text
+Supports Daily / Weekly / Bi-Weekly / Monthly / Yearly frequencies
 
----
+Budgets & Alerts
+Set monthly budgets per category (e.g., "$500/month on Dining")
 
-## Why I Used `decimal` (Not `float`/`double`) For Money
+Track actual expense spend against budget (income excluded)
 
-All monetary values use C#'s `decimal` type — never `float` or `double`.
+Background service detects overspend and generates in-app alerts
 
-`float` and `double` are binary floating-point types. They can't represent most decimal fractions exactly, so tiny rounding errors creep in:
+One alert per category per month — no duplicate notifications
 
-```csharp
+CSV Import
+Import bank statements from CSV
+
+Duplicate detection (same date + amount + description)
+
+Malformed rows reported individually — the whole import never crashes
+
+Preview parsed transactions before committing
+
+Import is transactional — all-or-nothing per batch
+
+Reporting
+Monthly spend by category
+
+Balance-over-time / net worth trend
+
+Income vs. expense summary for a selected date range
+
+Authentication & Authorization
+JWT-based authentication
+
+All financial data scoped to the logged-in user
+
+Users can never query another user's data, even by guessing IDs
+
+Concurrency Control
+Optimistic concurrency on accounts via a RowVersion concurrency token
+
+A SaveChangesInterceptor automatically bumps the token on every save — services can't forget
+
+Concurrent edits throw DbUpdateConcurrencyException, caught by services and surfaced as a clean error instead of silently overwriting
+
+Verified by tests: two concurrent writes → exactly one succeeds, the other fails with a concurrency error
+
+Audit Trail
+Every transaction change (create, edit, soft-delete) is recorded with a timestamp
+
+Includes old and new values, the acting user, and the entity ID
+
+Tech Stack
+Layer	Technology
+Backend	ASP.NET Core 10
+ORM	Entity Framework Core
+Database	PostgreSQL 15
+Auth	JWT + ASP.NET Identity
+Validation	FluentValidation
+Background Jobs	IHostedService / BackgroundService
+Frontend	React (Vite)
+Styling	CSS
+Containerization	Docker + Docker Compose
+Backend Hosting	Render
+Frontend Hosting	Vercel
+Database Hosting	Render Postgres
+Testing	xUnit + FluentAssertions + Moq + EF Core InMemory + SQLite
+Architecture
+The system is a three-tier application: React frontend, ASP.NET Core backend, PostgreSQL database.
+
+Frontend (Vercel) → HTTPS with JWT in header → Backend (Render, Docker) → Npgsql → PostgreSQL 15 (Render)
+
+The backend is structured as:
+
+Controllers — HTTP entry points
+
+Services — business logic (AccountService, TransactionService, TransferService, etc.)
+
+Background Services — BudgetAlertService, RecurringRuleService (IHostedService)
+
+Entity Framework Core — ORM and migrations
+
+Why I Used decimal (Not float/double) For Money
+All monetary values use C#'s decimal type — never float or double.
+
+float and double are binary floating-point types. They can't represent most decimal fractions exactly, so tiny rounding errors creep in:
+
+csharp
 double a = 0.1;
 double b = 0.2;
 double sum = a + b;
@@ -141,7 +144,7 @@ decimal is a base-10 type designed for financial math. It represents 0.1 and 0.2
 
 Result: Account balances are always exact. Reports never drift. Money doesn't silently lose fractions of a cent.
 
-## How To Run Locally
+How To Run Locally
 Prerequisites
 Docker Desktop (for the database)
 
@@ -172,11 +175,9 @@ npm run dev
 Frontend runs on http://localhost:5173 (or 3000 — check the terminal output).
 
 4. Open the app
-text
-http://localhost:5173
-Register a user, log in, and start using the app.
+Navigate to http://localhost:5173. Register a user, log in, and start using the app.
 
-## Running With Docker Compose (Full Stack)
+Running With Docker Compose (Full Stack)
 bash
 docker-compose up --build
 Then open http://localhost:3000.
@@ -209,7 +210,7 @@ Variable	Description
 VITE_API_URL	Backend API base URL
 Note: Secrets are never committed to this repo. appsettings.json contains placeholders only; real values live in appsettings.Development.json (gitignored) or platform environment variables.
 
-## Database Migrations
+Database Migrations
 Migrations are applied automatically on backend startup. To create a new migration:
 
 bash
@@ -219,35 +220,44 @@ To apply manually:
 
 bash
 dotnet ef database update
+Project Structure
+The project is organized into three main folders: Backend/, Fronted/ (React frontend), and Tests/.
 
-## Project Structure
-text
-Expense-tracker/
-├── Backend/
-│   ├── Attributes/
-│   ├── Controllers/
-│   ├── DTOs/
-│   ├── Migrations/
-│   ├── Models/
-│   ├── Services/
-│   ├── Validators/
-│   ├── Program.cs
-│   ├── appsettings.json
-│   └── Dockerfile
-├── Fronted/
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   ├── vercel.json
-│   └── Dockerfile
-├── Tests/
-│   ├── Services/          ← service-level tests
-│   ├── Controllers/       ← HTTP integration tests
-│   └── Infrastructure/    ← test base classes (InMemory + SQLite)
-├── docker-compose.yml
-└── README.md
+Backend/ contains the ASP.NET Core API:
 
-## Testing
+Controllers/ — HTTP endpoints
+
+Services/ — business logic
+
+Models/ — EF Core entities
+
+DTOs/ — request/response objects
+
+Validators/ — FluentValidation rules
+
+Migrations/ — EF Core migrations
+
+Attributes/ — custom attributes
+
+Program.cs, appsettings.json, Dockerfile
+
+Fronted/ contains the React frontend:
+
+src/, public/
+
+package.json, vercel.json, Dockerfile
+
+Tests/ contains the test suite:
+
+Services/ — service-level tests
+
+Controllers/ — HTTP integration tests
+
+Infrastructure/ — test base classes (InMemory + SQLite)
+
+Root also contains docker-compose.yml and README.md.
+
+Testing
 The project includes ~100 automated tests across service, controller, and integration layers.
 
 Test infrastructure
@@ -271,11 +281,11 @@ CSV import	Valid parse, malformed rows reported individually, duplicates skipped
 Controllers (HTTP)	Auth (401 without token), happy path (200), validation (400), IDOR (other user's resource), round-trip (create → list), list isolation	~15
 Total: ~100 tests, all green.
 
-## How to run
+How to run
 bash
 cd Tests
 dotnet test
-Or filtered:
+Or filtered by test class:
 
 bash
 # Just concurrency tests
